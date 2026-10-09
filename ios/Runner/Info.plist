@@ -27,7 +27,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Ứng dụng dùng camera để quét mã VietQR.</string>
+	<string>Ứng dụng dùng camera để chụp ảnh giao dịch thanh toán.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Ứng dụng cần truy cập ảnh để đọc bill chuyển khoản.</string>
 	<key>UIApplicationSceneManifest</key>

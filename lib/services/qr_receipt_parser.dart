@@ -104,7 +104,7 @@ class QrReceiptParser {
 
   static double _extractAmount(String text) {
     final labeled = RegExp(
-      r'(?:tổng\s*tiền|tong\s*tien|số\s*tiền|so\s*tien|thành\s*tiền|thanh\s*tien|amount|total|debit)\s*[:：]?\s*((?:VND|₫)\s*)?([0-9][0-9., ]*)\s*(?:VND|VNĐ|₫)?',
+      r'(?:tổng\s*cộng|tong\s*cong|thanh\s*toán|thanh\s*toan|tổng\s*tiền|tong\s*tien|số\s*tiền|so\s*tien|thành\s*tiền|thanh\s*tien|tổng|tong|amount|total|debit|payment)\s*[:：]?\s*((?:VND|₫)\s*)?([0-9][0-9., ]*)\s*(?:VND|VNĐ|₫)?',
       caseSensitive: false,
     ).firstMatch(text);
     if (labeled != null) {

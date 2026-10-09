@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -46,18 +48,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadDashboard() async {
     try {
-      final results = await Future.wait<Object>([
-        DatabaseHelper.instance.getExpenses(),
-        DatabaseHelper.instance.getCategoryTotals(),
-        DatabaseHelper.instance.getWeeklySpendingList(),
-        DatabaseHelper.instance.getTotalSpending(),
-      ]);
+      final expenses = await DatabaseHelper.instance.getExpenses();
+      final categoryTotals = <String, double>{};
+      for (final expense in expenses) {
+        categoryTotals.update(
+          expense.category,
+          (total) => total + expense.totalAmount,
+          ifAbsent: () => expense.totalAmount,
+        );
+      }
       if (!mounted) return;
       setState(() {
-        _expenses = results[0] as List<Expense>;
-        _categoryTotals = results[1] as Map<String, double>;
-        _weeklyTotals = results[2] as List<double>;
-        _total = results[3] as double;
+        _expenses = expenses;
+        _categoryTotals = Map.fromEntries(
+          categoryTotals.entries.toList()
+            ..sort((a, b) => b.value.compareTo(a.value)),
+        );
+        _weeklyTotals = DatabaseHelper.calculateWeeklySpendingList(expenses);
+        _total = expenses.fold<double>(
+          0,
+          (total, expense) => total + expense.totalAmount,
+        );
         _loading = false;
         _loadError = null;
       });
@@ -128,8 +139,8 @@ class _HomeScreenState extends State<HomeScreen> {
     ).subtract(const Duration(days: 6));
     return List<String>.generate(7, (index) {
       final day = firstDay.add(Duration(days: index));
-      return DateFormat('EE', 'vi').format(day);
-    });
+      return DateFormat('dd/MM/yyyy').format(day);
+    }).reversed.toList();
   }
 
   @override
@@ -142,9 +153,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Quét QR hoặc bill',
+            tooltip: 'Chụp hoặc chọn ảnh giao dịch',
             onPressed: _openScanner,
-            icon: const Icon(Icons.qr_code_scanner_rounded),
+            icon: const Icon(Icons.document_scanner_outlined),
           ),
           PopupMenuButton<String>(
             tooltip: 'Tài khoản',
@@ -180,13 +191,20 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
                 children: [
+                  if (DatabaseHelper.instance.isOffline) ...[
+                    _buildOfflineNotice(),
+                    const SizedBox(height: 12),
+                  ],
                   _buildTotalCard(),
                   const SizedBox(height: 22),
                   _sectionHeader('Tổng quan', 'Phân bổ theo danh mục'),
                   const SizedBox(height: 12),
                   _buildCategoryCard(),
                   const SizedBox(height: 18),
-                  _sectionHeader('7 ngày gần đây', 'Chi tiêu theo ngày'),
+                  _sectionHeader(
+                    '7 ngày gần đây (có hôm nay)',
+                    'Ngày/tháng/năm',
+                  ),
                   const SizedBox(height: 12),
                   _buildWeeklyCard(),
                   const SizedBox(height: 22),
@@ -199,6 +217,33 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildOfflineNotice() {
+    return Card(
+      color: const Color(0xFFFFF4DA),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Row(
+          children: [
+            const Icon(Icons.cloud_off_outlined, color: Color(0xFF805A00)),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Đang ngoại tuyến. Giao dịch được lưu trên thiết bị và sẽ '
+                'đồng bộ khi có kết nối.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Thử đồng bộ lại',
+              onPressed: _loadDashboard,
+              icon: const Icon(Icons.sync),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -381,6 +426,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildWeeklyCard() {
+    final chartWidth = math.max(
+      MediaQuery.sizeOf(context).width - 64,
+      _weeklyTotals.length * 82.0,
+    ).toDouble();
     return Card(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
@@ -400,19 +449,22 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            SizedBox(
-              height: 142,
-              width: double.infinity,
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0, end: 1),
-                duration: const Duration(milliseconds: 850),
-                curve: Curves.easeOutCubic,
-                builder: (context, progress, _) => CustomPaint(
-                  painter: BarChartPainter(
-                    values: _weeklyTotals,
-                    labels: _weekLabels,
-                    progress: progress,
-                    color: Theme.of(context).colorScheme.primary,
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                height: 142,
+                width: chartWidth,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: 1),
+                  duration: const Duration(milliseconds: 850),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, progress, _) => CustomPaint(
+                    painter: BarChartPainter(
+                      values: _weeklyTotals.reversed.toList(),
+                      labels: _weekLabels,
+                      progress: progress,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                 ),
               ),
@@ -441,7 +493,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Quét VietQR hoặc chọn ảnh giao dịch để bắt đầu.',
+              'Chụp ảnh bill hoặc chọn ảnh giao dịch để bắt đầu.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.blueGrey.shade500, fontSize: 12),
             ),

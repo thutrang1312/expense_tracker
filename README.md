@@ -74,9 +74,11 @@ tiến trình khác giữ, chờ build đó kết thúc trước khi chạy lạ
 
 ## Tính năng
 
-- Quét VietQR bằng camera và sửa thông tin nhận diện trước khi lưu.
-- Chọn ảnh giao dịch thanh toán, tự nhận diện số tiền, ngày, mã và nội dung
-  giao dịch trên thiết bị; có thể chỉnh lại và chọn loại chi tiêu trước khi lưu.
+- Chụp ảnh hoặc chọn ảnh giao dịch thanh toán, tự nhận diện số tiền, ngày, mã
+  và nội dung giao dịch trên thiết bị; có thể chỉnh lại và chọn loại chi tiêu
+  trước khi lưu.
 - Đăng ký/đăng nhập và lưu, sửa, xóa giao dịch trên Supabase với quyền truy
   cập được giới hạn theo tài khoản.
+- Giao dịch được lưu tạm cục bộ khi ngoại tuyến và tự đồng bộ lại khi kết nối
+  trở lại.
 - Dashboard tổng chi, donut chart theo danh mục, biểu đồ 7 ngày và lịch sử.

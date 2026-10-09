@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:qr_expense_tracker/models/expense.dart';
 import 'package:qr_expense_tracker/services/qr_receipt_parser.dart';
+import 'package:qr_expense_tracker/services/database_helper.dart';
 
 void main() {
   test('parses VietQR amount, recipient, and reference', () {
@@ -27,6 +29,18 @@ void main() {
     expect(expense.date, DateTime(2026, 10, 7));
   });
 
+  test('prefers invoice total labels when extracting amount', () {
+    for (final label in ['Tổng cộng', 'Thanh toán', 'Tổng']) {
+      final expense = QrReceiptParser.parseBankBillText(
+        'Tiền hàng: 100.000 VND\n'
+        '$label: 125.000 VND\n'
+        'Tiền khách đưa: 200.000 VND',
+      );
+
+      expect(expense.totalAmount, 125000);
+    }
+  });
+
   test('extracts amount and transaction content from a bank payment image', () {
     final expense = QrReceiptParser.parseBankBillText(
       'VietinBank\n'
@@ -43,5 +57,27 @@ void main() {
     expect(expense.totalAmount, 57000);
     expect(expense.merchant, 'TRAN THI THU TRANG Chuyen tien');
     expect(expense.date, DateTime(2026, 10, 2));
+  });
+
+  test('shows the seven-day period through today with calendar dates', () {
+    final totals = DatabaseHelper.calculateWeeklySpendingList([
+      Expense(
+        merchant: 'Payment seven days ago',
+        totalAmount: 57000,
+        date: DateTime(2026, 10, 2, 14, 42),
+      ),
+      Expense(
+        merchant: 'Payment before the period',
+        totalAmount: 30000,
+        date: DateTime(2026, 10, 1),
+      ),
+      Expense(
+        merchant: 'Payment today',
+        totalAmount: 10000,
+        date: DateTime(2026, 10, 9, 14),
+      ),
+    ], now: DateTime(2026, 10, 9, 14));
+
+    expect(totals, [57000, 0, 0, 0, 0, 0, 0, 10000]);
   });
 }

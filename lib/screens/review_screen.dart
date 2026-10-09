@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -125,20 +126,65 @@ class _ReviewScreenState extends State<ReviewScreen> {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
             children: [
               if (imagePath != null) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.file(
-                    File(imagePath),
-                    height: 180,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      height: 100,
-                      alignment: Alignment.center,
+                if (kIsWeb)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
                       color: Colors.white,
-                      child: const Text('Không thể hiển thị ảnh bill'),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info_outline),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Ảnh giao dịch được lưu trên thiết bị đã nhận diện '
+                            'và không thể mở trực tiếp trên trình duyệt.',
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  GestureDetector(
+                    onTap: () => _showFullImage(imagePath),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Stack(
+                        children: [
+                          Image.file(
+                            File(imagePath),
+                            height: 180,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                                  height: 100,
+                                  alignment: Alignment.center,
+                                  color: Colors.white,
+                                  child: const Text(
+                                    'Không thể hiển thị ảnh bill',
+                                  ),
+                                ),
+                          ),
+                          const Positioned(
+                            right: 10,
+                            bottom: 10,
+                            child: CircleAvatar(
+                              radius: 17,
+                              backgroundColor: Colors.black54,
+                              child: Icon(
+                                Icons.zoom_in,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
                 const SizedBox(height: 20),
               ],
               Text(
@@ -257,6 +303,40 @@ class _ReviewScreenState extends State<ReviewScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showFullImage(String imagePath) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => Dialog.fullscreen(
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 5,
+                child: Image.file(
+                  File(imagePath),
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Text('Không thể hiển thị ảnh bill'),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topRight,
+                child: IconButton.filledTonal(
+                  tooltip: 'Đóng ảnh',
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
